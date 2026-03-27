@@ -10,18 +10,12 @@
 <body>
   <div id="app">
 
-    <!-- Toolbar -->
+    <!-- Toolbar row 1: market selection -->
     <div id="toolbar">
       <div class="toolbar-group">
-        <select id="exchange-select">
-          <option value="">Exchange...</option>
-        </select>
-        <select id="symbol-select" disabled>
-          <option value="">Symbol...</option>
-        </select>
-        <select id="timeframe-select" disabled>
-          <option value="">Timeframe...</option>
-        </select>
+        <select id="exchange-select"><option value="">Exchange...</option></select>
+        <select id="symbol-select" disabled><option value="">Symbol...</option></select>
+        <select id="timeframe-select" disabled><option value="">Timeframe...</option></select>
         <input id="since-input" type="datetime-local" title="Start date (optional)" disabled />
         <button id="load-btn" disabled>Load</button>
       </div>
@@ -30,13 +24,61 @@
       </div>
     </div>
 
-    <!-- Chart -->
-    <div id="chart-container">
-      <div id="chart"></div>
-      <div id="crosshair-info"></div>
+    <!-- Toolbar row 2: indicators + drawing tools -->
+    <div id="toolbar2">
+      <div class="toolbar-group">
+        <span class="toolbar-label">Indicators</span>
+        <button class="ind-btn" data-ind="sma20"  data-color="#f0e040">SMA 20</button>
+        <button class="ind-btn" data-ind="sma50"  data-color="#ff9800">SMA 50</button>
+        <button class="ind-btn" data-ind="sma200" data-color="#e040fb">SMA 200</button>
+        <button class="ind-btn" data-ind="ema20"  data-color="#40c4ff">EMA 20</button>
+        <button class="ind-btn" data-ind="bb"     data-color="#aaaaaa">BB</button>
+        <button class="ind-btn" data-ind="rsi"    data-color="#26a69a">RSI</button>
+        <button class="ind-btn" data-ind="macd"   data-color="#5c6bc0">MACD</button>
+        <button class="ind-btn" data-ind="stoch"  data-color="#ff6b9d">Stoch</button>
+      </div>
+      <div class="toolbar-group">
+        <span class="toolbar-label">Draw</span>
+        <button class="draw-btn active" data-tool="pointer" title="Select / Annotate">&#9654;</button>
+        <button class="draw-btn" data-tool="hline"    title="Horizontal line">&#9135;</button>
+        <button class="draw-btn" data-tool="trendline" title="Trend line">&#8599;</button>
+        <button id="clear-drawings-btn" title="Clear all drawings">&#128465;</button>
+      </div>
     </div>
 
-    <!-- Annotation panel (hidden until candle clicked) -->
+    <!-- Chart area: main + optional RSI + optional MACD -->
+    <div id="chart-area">
+      <div id="chart-main-wrap">
+        <div id="chart-main"></div>
+        <div id="crosshair-info"></div>
+      </div>
+      <div id="chart-rsi-wrap" class="sub-chart hidden">
+        <div class="resize-handle"></div>
+        <div class="pane-header">
+          <span class="drag-icon">&#8942;&#8942;</span>
+          <span class="sub-label">RSI 14</span>
+        </div>
+        <div id="chart-rsi"></div>
+      </div>
+      <div id="chart-macd-wrap" class="sub-chart hidden">
+        <div class="resize-handle"></div>
+        <div class="pane-header">
+          <span class="drag-icon">&#8942;&#8942;</span>
+          <span class="sub-label">MACD 12·26·9</span>
+        </div>
+        <div id="chart-macd"></div>
+      </div>
+      <div id="chart-stoch-wrap" class="sub-chart hidden">
+        <div class="resize-handle"></div>
+        <div class="pane-header">
+          <span class="drag-icon">&#8942;&#8942;</span>
+          <span class="sub-label">Ehlers Stoch CG · length 8</span>
+        </div>
+        <div id="chart-stoch"></div>
+      </div>
+    </div>
+
+    <!-- Annotation panel -->
     <div id="annotation-panel" class="hidden">
       <div id="annotation-inner">
         <div id="annotation-time"></div>
@@ -65,7 +107,7 @@
       </div>
     </div>
 
-    <!-- Annotations list -->
+    <!-- Sidebar: annotation list -->
     <div id="sidebar">
       <div id="sidebar-header">
         <span>Annotations</span>
@@ -78,6 +120,9 @@
 
   <script src="/static/js/api.js"></script>
   <script src="/static/js/chart.js"></script>
+  <script src="/static/js/drawing.js"></script>
+  <script src="/static/js/indicators.js"></script>
+  <script src="/static/js/pane-manager.js"></script>
   <script src="/static/js/annotate.js"></script>
   <script src="/static/js/app.js"></script>
 </body>

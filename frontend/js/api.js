@@ -37,6 +37,18 @@ const API = {
     return API.get(url)
   },
 
+  ticker: (exchange, symbol) =>
+    API.get(`/api/ticker?exchange=${encodeURIComponent(exchange)}&symbol=${encodeURIComponent(symbol)}`),
+
+  latestCandles: (exchange, symbol, timeframe) =>
+    API.get(`/api/ohlcv/latest?exchange=${encodeURIComponent(exchange)}&symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`),
+
+  indicators: (exchange, symbol, timeframe, since, limit = 500, inds = "sma20,rsi,macd") => {
+    let url = `/api/indicators?exchange=${encodeURIComponent(exchange)}&symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=${limit}&indicators=${encodeURIComponent(inds)}`
+    if (since) url += `&since=${encodeURIComponent(since)}`
+    return API.get(url)
+  },
+
   saveAnnotation: (data) => API.post("/api/annotations", data),
   listAnnotations: (exchange, symbol) => {
     let url = "/api/annotations"

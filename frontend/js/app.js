@@ -1,11 +1,8 @@
 (() => {
   // ── State ──────────────────────────────────────────
-  let state = {
-    exchange:  null,
-    symbol:    null,
-    timeframe: null,
-    since:     null,
-  }
+  let state = { exchange: null, symbol: null, timeframe: null, since: null }
+  let liveInterval   = null
+  let tickerInterval = null
 
   // ── Elements ───────────────────────────────────────
   const exchangeSelect  = document.getElementById("exchange-select")
@@ -18,39 +15,59 @@
   const annotationList  = document.getElementById("annotation-list")
   const annotationCount = document.getElementById("annotation-count")
 
-  // ── Init chart ─────────────────────────────────────
-  ChartManager.init(document.getElementById("chart"))
+  // ── Init ───────────────────────────────────────────
+  ChartManager.init()
+  PaneManager.init()
 
-  // ── Crosshair info ─────────────────────────────────
-  ChartManager.onCrosshairMove(param => {
-    if (!param.time) { crosshairInfo.textContent = ""; return }
-    const candle = ChartManager.getCandleAt(param.time)
-    if (!candle) return
-    const dt = new Date(candle.time * 1000).toUTCString()
-    crosshairInfo.textContent =
-      `${dt}  O: ${candle.open}  H: ${candle.high}  L: ${candle.low}  C: ${candle.close}  V: ${Math.round(candle.volume)}`
+  // ── Indicator buttons ──────────────────────────────
+  document.querySelectorAll(".ind-btn").forEach(btn => {
+    const color = btn.dataset.color || "#ffffff"
+    btn.style.setProperty("--ind-color", color)
+    btn.addEventListener("click", () => Indicators.toggle(btn.dataset.ind))
   })
 
-  // ── Click to annotate ──────────────────────────────
+  // ── Drawing tool buttons ───────────────────────────
+  document.querySelectorAll(".draw-btn").forEach(btn => {
+    btn.addEventListener("click", () => Drawing.setTool(btn.dataset.tool))
+  })
+
+  document.getElementById("clear-drawings-btn").addEventListener("click", () => {
+    Drawing.clearAll()
+  })
+
+  // ── Chart events ───────────────────────────────────
+  ChartManager.onCrosshairMove(param => {
+    if (!param.time) { crosshairInfo.textContent = ""; return }
+    const c = ChartManager.getCandleAt(param.time)
+    if (!c) return
+    const dt = new Date(c.time * 1000).toUTCString()
+    crosshairInfo.textContent =
+      `${dt}  O: ${c.open}  H: ${c.high}  L: ${c.low}  C: ${c.close}  V: ${Math.round(c.volume)}`
+  })
+
   ChartManager.onClick(param => {
+    const tool = Drawing.getTool()
+
+    // Drawing tools get priority
+    if (tool !== "pointer") {
+      Drawing.handleClick(param)
+      return
+    }
+
+    // Pointer mode → annotate
     if (!param.time || !state.exchange) return
     const candle = ChartManager.getCandleAt(param.time)
     if (!candle) return
-    Annotate.open(candle, {
-      exchange:  state.exchange,
-      symbol:    state.symbol,
-      timeframe: state.timeframe,
-    })
+    Annotate.open(candle, { exchange: state.exchange, symbol: state.symbol, timeframe: state.timeframe })
   })
 
-  // ── On annotation saved ────────────────────────────
   Annotate.onSaved(annotation => {
     ChartManager.addMarker(annotation)
     prependAnnotationItem(annotation)
     annotationCount.textContent = parseInt(annotationCount.textContent) + 1
   })
 
-  // ── Bootstrap: load exchanges & timeframes ─────────
+  // ── Bootstrap ──────────────────────────────────────
   async function bootstrap() {
     const [exchanges, timeframes] = await Promise.all([API.exchanges(), API.timeframes()])
 
@@ -66,22 +83,22 @@
       timeframeSelect.appendChild(opt)
     })
 
-    // Default timeframe to 1h
     timeframeSelect.value = "1h"
+
+    // Default to Binance — best historical data access
+    exchangeSelect.value = "binance"
+    exchangeSelect.dispatchEvent(new Event("change"))
   }
 
-  // ── Exchange change → load symbols ─────────────────
   exchangeSelect.addEventListener("change", async () => {
     const ex = exchangeSelect.value
     if (!ex) return
-
     symbolSelect.disabled = true
     symbolSelect.innerHTML = "<option>Loading...</option>"
     timeframeSelect.disabled = true
     sinceInput.disabled = true
     loadBtn.disabled = true
     setStatus("Loading symbols...")
-
     try {
       const symbols = await API.symbols(ex)
       symbolSelect.innerHTML = "<option value=''>Symbol...</option>"
@@ -101,23 +118,22 @@
 
   symbolSelect.addEventListener("change", updateLoadBtn)
   timeframeSelect.addEventListener("change", updateLoadBtn)
-
   function updateLoadBtn() {
     loadBtn.disabled = !(symbolSelect.value && timeframeSelect.value)
   }
 
-  // ── Load chart data ────────────────────────────────
+  // ── Load chart ─────────────────────────────────────
   loadBtn.addEventListener("click", async () => {
     const exchange  = exchangeSelect.value
     const symbol    = symbolSelect.value
     const timeframe = timeframeSelect.value
     const since     = sinceInput.value ? new Date(sinceInput.value).toISOString() : null
-
     if (!exchange || !symbol || !timeframe) return
 
     state = { exchange, symbol, timeframe, since }
     setStatus("Loading chart...")
     loadBtn.disabled = true
+    stopLive()
 
     try {
       const [candles, annotations] = await Promise.all([
@@ -128,7 +144,11 @@
       ChartManager.setData(candles)
       ChartManager.setMarkers(annotations)
       renderAnnotationList(annotations)
-      setStatus(`${candles.length} candles · ${annotations.length} annotations`)
+      setStatus(`${candles.length} candles · ${annotations.length} annotations · live`)
+
+      await Indicators.refresh(state)
+      startLive()
+      startTicker()
     } catch (err) {
       setStatus("Error: " + err.message)
     } finally {
@@ -136,7 +156,7 @@
     }
   })
 
-  // ── Annotation list rendering ──────────────────────
+  // ── Annotation list ────────────────────────────────
   function renderAnnotationList(annotations) {
     annotationList.innerHTML = ""
     annotationCount.textContent = annotations.length
@@ -161,8 +181,7 @@
       <button class="ann-delete" title="Delete">×</button>
     `
 
-    el.querySelector(".ann-delete").addEventListener("click", async (e) => {
-      e.stopPropagation()
+    el.querySelector(".ann-delete").addEventListener("click", async () => {
       await API.deleteAnnotation(a.id)
       el.remove()
       ChartManager.removeMarker(a.id)
@@ -172,11 +191,50 @@
     annotationList.prepend(el)
   }
 
-  function setStatus(msg) { statusEl.textContent = msg }
+  // ── Live polling ───────────────────────────────────
+  function startLive() {
+    let inFlight = false
+    const tick = async () => {
+      if (!state.exchange || inFlight) return
+      inFlight = true
+      try {
+        const candles = await API.latestCandles(state.exchange, state.symbol, state.timeframe)
+        candles.forEach(c => ChartManager.updateCandle(c))
+      } catch (err) {
+        console.warn("[live]", err.message)
+      } finally {
+        inFlight = false
+      }
+    }
+    liveInterval = setInterval(tick, 1000)
+  }
 
+  function stopLive() {
+    if (liveInterval)   { clearInterval(liveInterval);   liveInterval   = null }
+    if (tickerInterval) { clearInterval(tickerInterval); tickerInterval = null }
+  }
+
+  function startTicker() {
+    let inFlight = false
+    const tick = async () => {
+      if (!state.exchange || inFlight) return
+      inFlight = true
+      try {
+        const { price } = await API.ticker(state.exchange, state.symbol)
+        ChartManager.updateLastPrice(price)
+      } catch (err) {
+        console.warn("[ticker]", err.message)
+      } finally {
+        inFlight = false
+      }
+    }
+    tickerInterval = setInterval(tick, 500)
+  }
+
+  function setStatus(msg) { statusEl.textContent = msg }
   function escapeHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
   }
 
-  bootstrap()
+bootstrap()
 })()

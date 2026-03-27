@@ -6,10 +6,12 @@
   --border:    #2a2a32;
   --text:      #e0e0e6;
   --muted:     #6b6b7a;
-  --green:     #26a69a;
-  --red:       #ef5350;
+  --green:     #1ce3ed;
+  --red:       #ff962e;
   --accent:    #5c6bc0;
   --panel-w:   280px;
+  --toolbar-h: 44px;
+  --toolbar2-h: 38px;
 }
 
 body {
@@ -23,30 +25,41 @@ body {
 
 #app {
   display: grid;
-  grid-template-rows: 44px 1fr;
+  grid-template-rows: var(--toolbar-h) var(--toolbar2-h) 1fr;
   grid-template-columns: 1fr var(--panel-w);
   grid-template-areas:
     "toolbar  toolbar"
+    "toolbar2 toolbar2"
     "chart    sidebar";
   height: 100vh;
 }
 
-/* ── Toolbar ─────────────────────────────────────── */
-#toolbar {
-  grid-area: toolbar;
+/* ── Toolbars ─────────────────────────────────────── */
+#toolbar, #toolbar2 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   gap: 8px;
 }
 
+#toolbar  { grid-area: toolbar; }
+#toolbar2 { grid-area: toolbar2; }
+
 .toolbar-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.toolbar-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 2px;
 }
 
 select, input[type="datetime-local"] {
@@ -68,9 +81,9 @@ button {
   color: #fff;
   border: none;
   border-radius: 4px;
-  padding: 4px 14px;
+  padding: 4px 12px;
   font-size: 12px;
-  height: 28px;
+  height: 26px;
   cursor: pointer;
   transition: opacity 0.15s;
 }
@@ -80,26 +93,142 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 #status { color: var(--muted); font-size: 12px; }
 
-/* ── Chart ───────────────────────────────────────── */
-#chart-container {
-  grid-area: chart;
-  position: relative;
-  overflow: hidden;
+/* ── Indicator buttons ────────────────────────────── */
+.ind-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 3px 9px;
+  font-size: 11px;
+  height: 24px;
+  border-radius: 3px;
 }
 
-#chart {
+.ind-btn.active {
+  border-color: var(--ind-color, #fff);
+  color: var(--ind-color, #fff);
+  background: color-mix(in srgb, var(--ind-color, #fff) 12%, transparent);
+}
+
+/* ── Drawing tool buttons ─────────────────────────── */
+.draw-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 0;
+  width: 28px;
+  height: 24px;
+  font-size: 13px;
+  border-radius: 3px;
+}
+
+.draw-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+#clear-drawings-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 28px;
+  padding: 0;
+}
+
+#clear-drawings-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Chart area ───────────────────────────────────── */
+#chart-area {
+  grid-area: chart;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+#chart-main-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
+
+#chart-main {
   width: 100%;
   height: 100%;
-  cursor: crosshair;
+}
+
+.sub-chart {
+  flex: 0 0 140px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 60px;
+}
+
+#chart-stoch-wrap {
+  flex: 0 0 260px;
+}
+
+.sub-chart.hidden { display: none; }
+
+.resize-handle {
+  height: 5px;
+  background: transparent;
+  cursor: ns-resize;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.resize-handle:hover { background: var(--accent); }
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+.pane-header:active { cursor: grabbing; }
+
+.drag-icon {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: -2px;
+}
+
+.sub-label {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.sub-chart.is-dragging {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.pane-drop-indicator {
+  flex: 0 0 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: opacity 0.1s;
+}
+
+#chart-rsi, #chart-macd, #chart-stoch {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
 }
 
 #crosshair-info {
   position: absolute;
-  top: 12px;
-  left: 16px;
-  font-size: 12px;
+  top: 8px;
+  left: 12px;
+  font-size: 11px;
   color: var(--muted);
   pointer-events: none;
+  z-index: 2;
 }
 
 /* ── Annotation panel ────────────────────────────── */
@@ -108,7 +237,7 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
+  z-index: 20;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -133,10 +262,7 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   margin-bottom: 12px;
 }
 
-.signal-group {
-  display: flex;
-  gap: 4px;
-}
+.signal-group { display: flex; gap: 4px; }
 
 .sig-btn {
   width: 40px;
@@ -237,7 +363,6 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
-  cursor: default;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -246,23 +371,12 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .annotation-item:hover { border-color: var(--accent); }
 
-.ann-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
+.ann-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ann-symbol { font-size: 12px; font-weight: 600; color: var(--text); }
 .ann-time   { font-size: 10px; color: var(--muted); }
 .ann-notes  { font-size: 10px; color: var(--muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
 
-.ann-signal {
-  font-size: 15px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
+.ann-signal { font-size: 15px; font-weight: 700; flex-shrink: 0; }
 .ann-signal.positive { color: var(--green); }
 .ann-signal.negative { color: var(--red); }
 

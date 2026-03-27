@@ -1,41 +1,116 @@
 import ccxt
 import statistics
+import time
 from datetime import datetime, timezone
 
 SUPPORTED_EXCHANGES = ["binance", "kraken", "bybit", "coinbase"]
 
 TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1d"]
 
+# How many days back to fetch by default per timeframe
+_DEFAULT_DAYS = {
+    "1m":  2,
+    "5m":  7,
+    "15m": 14,
+    "30m": 30,
+    "1h":  90,
+    "4h":  90,
+    "1d":  365,
+}
 
-def fetch_ohlcv(exchange_id: str, symbol: str, timeframe: str, since_iso: str, limit: int = 500):
-    exchange_class = getattr(ccxt, exchange_id)
-    exchange = exchange_class({"enableRateLimit": True})
+# Max candles per request per exchange (CCXT limit)
+_EXCHANGE_BATCH = {
+    "binance":  1000,
+    "bybit":    200,
+    "kraken":   720,
+    "coinbase": 300,
+}
 
-    since_ms = None
+# Symbol cache: { exchange_id: { symbols: [...], fetched_at: float } }
+_symbol_cache: dict = {}
+_SYMBOL_TTL = 3600  # seconds
+
+# Exchange instance cache — reuse across requests
+_exchange_cache: dict = {}
+
+def _get_exchange(exchange_id: str):
+    if exchange_id not in _exchange_cache:
+        cls = getattr(ccxt, exchange_id)
+        _exchange_cache[exchange_id] = cls({"enableRateLimit": True})
+    return _exchange_cache[exchange_id]
+
+
+def _format(candle: list) -> dict:
+    return {
+        "time":   candle[0] // 1000,
+        "open":   candle[1],
+        "high":   candle[2],
+        "low":    candle[3],
+        "close":  candle[4],
+        "volume": candle[5],
+    }
+
+
+def fetch_ohlcv(exchange_id: str, symbol: str, timeframe: str, since_iso: str = None):
+    exchange = _get_exchange(exchange_id)
+    batch_size = _EXCHANGE_BATCH.get(exchange_id, 500)
+
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+
     if since_iso:
         dt = datetime.fromisoformat(since_iso.replace("Z", "+00:00"))
         since_ms = int(dt.timestamp() * 1000)
+    else:
+        days = _DEFAULT_DAYS.get(timeframe, 30)
+        since_ms = now_ms - days * 86_400_000
 
-    raw = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since_ms, limit=limit)
+    all_candles = []
+    while True:
+        batch = exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since_ms, limit=batch_size)
+        if not batch:
+            break
 
-    return [
-        {
-            "time":   candle[0] // 1000,
-            "open":   candle[1],
-            "high":   candle[2],
-            "low":    candle[3],
-            "close":  candle[4],
-            "volume": candle[5],
-        }
-        for candle in raw
-    ]
+        # Guard: some exchanges (Kraken) ignore `since` and always return latest data
+        if all_candles and batch[0][0] <= all_candles[-1][0]:
+            break
+
+        all_candles.extend(batch)
+
+        if len(batch) < batch_size:
+            break
+        since_ms = batch[-1][0] + 1
+        if since_ms >= now_ms:
+            break
+
+    return [_format(c) for c in all_candles]
+
+
+def fetch_ticker_price(exchange_id: str, symbol: str) -> float:
+    exchange = _get_exchange(exchange_id)
+    ticker = exchange.fetch_ticker(symbol)
+    return ticker["last"]
+
+
+def fetch_latest_candles(exchange_id: str, symbol: str, timeframe: str) -> list:
+    """Returns the last 2 candles — current (forming) + previous (closed)."""
+    exchange = _get_exchange(exchange_id)
+    raw = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=2)
+    return [_format(c) for c in raw]
 
 
 def fetch_symbols(exchange_id: str):
-    exchange_class = getattr(ccxt, exchange_id)
-    exchange = exchange_class({"enableRateLimit": True})
+    cached = _symbol_cache.get(exchange_id)
+    if cached and (time.time() - cached["fetched_at"]) < _SYMBOL_TTL:
+        return cached["symbols"]
+
+    exchange = _get_exchange(exchange_id)
     markets = exchange.load_markets()
-    return sorted([s for s in markets.keys() if "/USDT" in s or "/USD" in s])
+    all_syms = [s for s in markets.keys() if "/USDT" in s or "/USD" in s]
+    # USDT pairs first (main Binance markets), then USD
+    symbols = sorted([s for s in all_syms if s.endswith("/USDT")]) + \
+              sorted([s for s in all_syms if not s.endswith("/USDT")])
+    _symbol_cache[exchange_id] = {"symbols": symbols, "fetched_at": time.time()}
+    return symbols
 
 
 # ── Indicator calculations ─────────────────────────────────────────────────────
@@ -96,6 +171,60 @@ def _macd(closes: list[float], fast: int = 12, slow: int = 26, signal: int = 9):
     return macd_line, signal_line, histogram
 
 
+def _ehlers_stoch_cg(candles: list[dict], length: int = 8) -> tuple:
+    """
+    Ehlers Stochastic CG Oscillator [LazyBear]
+    Source: John Ehlers, "Cybernetic Analysis for Stocks and Futures"
+
+    Output oscillates around 0, range approx -1 to +1.
+    Overbought: +0.8 / Oversold: -0.8
+    Trigger = 0.96 * (v2[1] + 0.02)
+    """
+    src = [(c["high"] + c["low"]) / 2.0 for c in candles]
+    n   = len(src)
+
+    # Step 1: Center of Gravity
+    cg = []
+    for i in range(n):
+        if i < length - 1:
+            cg.append(None)
+            continue
+        nm = sum((1 + j) * src[i - j] for j in range(length))
+        dm = sum(src[i - j]            for j in range(length))
+        cg.append(-nm / dm + (length + 1) / 2.0 if dm != 0 else 0.0)
+
+    # Step 2: Stochastic normalization of CG
+    v1 = []
+    for i in range(n):
+        if cg[i] is None:
+            v1.append(None)
+            continue
+        window = [cg[j] for j in range(max(0, i - length + 1), i + 1) if cg[j] is not None]
+        if len(window) < 2:
+            v1.append(None)
+            continue
+        hi, lo = max(window), min(window)
+        v1.append((cg[i] - lo) / (hi - lo) if hi != lo else 0.0)
+
+    # Step 3: Weighted smoothing + rescale to [-1, 1]
+    v2 = []
+    for i in range(n):
+        vs = [v1[i - k] if i - k >= 0 else None for k in range(4)]
+        if any(x is None for x in vs):
+            v2.append(None)
+        else:
+            smoothed = (4*vs[0] + 3*vs[1] + 2*vs[2] + vs[3]) / 10.0
+            v2.append(2.0 * (smoothed - 0.5))
+
+    # Step 4: Trigger line
+    trigger = [None] * n
+    for i in range(1, n):
+        if v2[i] is not None and v2[i - 1] is not None:
+            trigger[i] = 0.96 * (v2[i - 1] + 0.02)
+
+    return v2, trigger
+
+
 def _bollinger(closes: list[float], period: int = 20, mult: float = 2.0):
     sma    = _sma(closes, period)
     upper  = [None] * (period - 1)
@@ -144,5 +273,10 @@ def calc_indicators(candles: list[dict], requested: list[str]) -> dict:
             for t, v in zip(times, hist)
             if v is not None
         ]
+
+    if "stoch" in requested:
+        osc, trig = _ehlers_stoch_cg(candles)
+        result["stoch_k"] = series(osc)   # main oscillator
+        result["stoch_d"] = series(trig)  # trigger line
 
     return result
