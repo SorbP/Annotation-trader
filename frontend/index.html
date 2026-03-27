@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Annotator</title>
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Toolbar -->
+    <div id="toolbar">
+      <div class="toolbar-group">
+        <select id="exchange-select">
+          <option value="">Exchange...</option>
+        </select>
+        <select id="symbol-select" disabled>
+          <option value="">Symbol...</option>
+        </select>
+        <select id="timeframe-select" disabled>
+          <option value="">Timeframe...</option>
+        </select>
+        <input id="since-input" type="datetime-local" title="Start date (optional)" disabled />
+        <button id="load-btn" disabled>Load</button>
+      </div>
+      <div class="toolbar-group">
+        <span id="status"></span>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div id="chart-container">
+      <div id="chart"></div>
+      <div id="crosshair-info"></div>
+    </div>
+
+    <!-- Annotation panel (hidden until candle clicked) -->
+    <div id="annotation-panel" class="hidden">
+      <div id="annotation-inner">
+        <div id="annotation-time"></div>
+        <div id="signal-row">
+          <div class="signal-group negative">
+            <button class="sig-btn" data-value="-5">−5</button>
+            <button class="sig-btn" data-value="-4">−4</button>
+            <button class="sig-btn" data-value="-3">−3</button>
+            <button class="sig-btn" data-value="-2">−2</button>
+            <button class="sig-btn" data-value="-1">−1</button>
+          </div>
+          <div class="signal-divider">▼ BEAR · BULL ▲</div>
+          <div class="signal-group positive">
+            <button class="sig-btn" data-value="1">+1</button>
+            <button class="sig-btn" data-value="2">+2</button>
+            <button class="sig-btn" data-value="3">+3</button>
+            <button class="sig-btn" data-value="4">+4</button>
+            <button class="sig-btn" data-value="5">+5</button>
+          </div>
+        </div>
+        <textarea id="notes-input" placeholder="Notes (optional)..." rows="2"></textarea>
+        <div id="annotation-actions">
+          <button id="save-btn" disabled>Save</button>
+          <button id="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Annotations list -->
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <span>Annotations</span>
+        <span id="annotation-count">0</span>
+      </div>
+      <div id="annotation-list"></div>
+    </div>
+
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/chart.js"></script>
+  <script src="/static/js/annotate.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
