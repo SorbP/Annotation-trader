@@ -55,10 +55,16 @@ const Annotate = (() => {
     }
   })
 
+  notesInput.addEventListener("input", () => {
+    notesInput.style.height = "auto"
+    notesInput.style.height = Math.min(notesInput.scrollHeight, 210) + "px"
+  })
+
   function open(candle, meta) {
     currentCandle = { ...candle, ...meta }
     selectedSignal = null
     notesInput.value = ""
+    notesInput.style.height = "auto"
     saveBtn.disabled = true
     sigBtns.forEach(b => b.classList.remove("selected"))
 

@@ -7,35 +7,35 @@ const PaneManager = (() => {
   }
 
   // ── Resize ────────────────────────────────────────
-  function initResize() {
-    area().addEventListener("mousedown", e => {
-      const handle = e.target.closest(".resize-handle")
-      if (!handle) return
+  function attachResize(handle) {
+    handle.addEventListener("mousedown", e => {
       const pane = handle.closest(".sub-chart")
       if (!pane) return
-
       e.preventDefault()
-      const startY  = e.clientY
-      const startH  = pane.getBoundingClientRect().height
-      document.body.style.cursor = "ns-resize"
+      e.stopPropagation()
+
+      const startY = e.clientY
+      const startH = pane.getBoundingClientRect().height
+      document.body.style.cursor    = "ns-resize"
       document.body.style.userSelect = "none"
 
-      function onMove(e) {
-        const delta = e.clientY - startY
-        const newH  = Math.max(60, startH + delta)
+      function onMove(ev) {
+        const newH = Math.max(60, startH - (ev.clientY - startY))
         pane.style.flex = `0 0 ${newH}px`
       }
-
       function onUp() {
         document.removeEventListener("mousemove", onMove)
         document.removeEventListener("mouseup",   onUp)
-        document.body.style.cursor = ""
+        document.body.style.cursor    = ""
         document.body.style.userSelect = ""
       }
-
       document.addEventListener("mousemove", onMove)
       document.addEventListener("mouseup",   onUp)
     })
+  }
+
+  function initResize() {
+    area().querySelectorAll(".resize-handle").forEach(attachResize)
   }
 
   // ── Drag-to-reorder ───────────────────────────────

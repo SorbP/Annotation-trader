@@ -18,10 +18,33 @@
         <select id="timeframe-select" disabled><option value="">Timeframe...</option></select>
         <input id="since-input" type="datetime-local" title="Start date (optional)" disabled />
         <button id="load-btn" disabled>Load</button>
+        <button id="chart-type-btn" title="Chart type">Candles &#9660;</button>
       </div>
       <div class="toolbar-group">
         <span id="status"></span>
       </div>
+    </div>
+
+    <!-- Chart type dropdown panel -->
+    <div id="chart-type-panel" class="hidden">
+      <div class="ct-colors">
+        <label class="ct-color-label">Up <input type="color" id="ct-up-color" value="#1ce3ed" /></label>
+        <label class="ct-color-label">Down <input type="color" id="ct-down-color" value="#ff962e" /></label>
+      </div>
+      <div class="ct-sep"></div>
+      <div class="ct-item active" data-type="candles">Candles</div>
+      <div class="ct-item" data-type="hollow">Hollow Candles</div>
+      <div class="ct-item" data-type="bars">Bars</div>
+      <div class="ct-item" data-type="hlc-bars">HLC Bars</div>
+      <div class="ct-item" data-type="heikin-ashi">Heikin Ashi</div>
+      <div class="ct-sep"></div>
+      <div class="ct-item" data-type="line">Line</div>
+      <div class="ct-item" data-type="line-markers">Line + Markers</div>
+      <div class="ct-item" data-type="step-line">Step Line</div>
+      <div class="ct-sep"></div>
+      <div class="ct-item" data-type="area">Area</div>
+      <div class="ct-item" data-type="baseline">Baseline</div>
+      <div class="ct-item" data-type="columns">Columns</div>
     </div>
 
     <!-- Toolbar row 2: indicators + drawing tools -->
@@ -110,7 +133,7 @@
             <button class="sig-btn" data-value="5">+5</button>
           </div>
         </div>
-        <textarea id="notes-input" placeholder="Notes (optional)..." rows="2"></textarea>
+        <textarea id="notes-input" placeholder="Notes (optional)..."></textarea>
         <div id="annotation-actions">
           <button id="save-btn" disabled>Save</button>
           <button id="cancel-btn">Cancel</button>

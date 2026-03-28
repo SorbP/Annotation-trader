@@ -39,6 +39,22 @@ def _get_exchange(exchange_id: str):
         _exchange_cache[exchange_id] = cls({"enableRateLimit": True})
     return _exchange_cache[exchange_id]
 
+# OHLCV cache: { key: { data: [...], fetched_at: float } }
+# Keeps the last fetch for 30s so indicator toggles don't re-hit the exchange.
+_ohlcv_cache: dict = {}
+_OHLCV_TTL = 30  # seconds
+
+def _ohlcv_cache_get(exchange_id, symbol, timeframe, since_iso):
+    key = (exchange_id, symbol, timeframe, since_iso or "")
+    entry = _ohlcv_cache.get(key)
+    if entry and (time.time() - entry["fetched_at"]) < _OHLCV_TTL:
+        return entry["data"]
+    return None
+
+def _ohlcv_cache_set(exchange_id, symbol, timeframe, since_iso, data):
+    key = (exchange_id, symbol, timeframe, since_iso or "")
+    _ohlcv_cache[key] = {"data": data, "fetched_at": time.time()}
+
 
 def _format(candle: list) -> dict:
     return {
@@ -52,6 +68,10 @@ def _format(candle: list) -> dict:
 
 
 def fetch_ohlcv(exchange_id: str, symbol: str, timeframe: str, since_iso: str = None):
+    cached = _ohlcv_cache_get(exchange_id, symbol, timeframe, since_iso)
+    if cached is not None:
+        return cached
+
     exchange = _get_exchange(exchange_id)
     batch_size = _EXCHANGE_BATCH.get(exchange_id, 500)
 
@@ -82,7 +102,9 @@ def fetch_ohlcv(exchange_id: str, symbol: str, timeframe: str, since_iso: str = 
         if since_ms >= now_ms:
             break
 
-    return [_format(c) for c in all_candles]
+    result = [_format(c) for c in all_candles]
+    _ohlcv_cache_set(exchange_id, symbol, timeframe, since_iso, result)
+    return result
 
 
 def fetch_ticker_price(exchange_id: str, symbol: str) -> float:

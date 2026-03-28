@@ -382,6 +382,71 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 .fib-sty-btn:hover  { border-color: var(--accent); color: var(--text); }
 .fib-sty-btn.active { border-color: var(--accent); color: var(--accent); }
 
+/* ── Chart type panel ────────────────────────────── */
+#chart-type-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  padding: 3px 9px;
+  height: 24px;
+  border-radius: 3px;
+}
+#chart-type-btn:hover:not(:disabled) { border-color: var(--accent); opacity: 1; }
+
+#chart-type-panel {
+  position: fixed;
+  z-index: 300;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 0;
+  min-width: 170px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+#chart-type-panel.hidden { display: none; }
+
+.ct-item {
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+.ct-item:hover { background: var(--border); }
+.ct-item.active { color: var(--accent); }
+
+.ct-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.ct-colors {
+  display: flex;
+  gap: 10px;
+  padding: 6px 14px 4px;
+  align-items: center;
+}
+
+.ct-color-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.ct-color-label input[type="color"] {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+}
+
 /* ── Context menu ────────────────────────────────── */
 #chart-context-menu {
   position: fixed;
@@ -435,17 +500,17 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
 #signal-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 12px;
 }
 
-.signal-group { display: flex; gap: 4px; }
+.signal-group { display: flex; gap: 3px; }
 
 .sig-btn {
-  width: 40px;
-  height: 36px;
+  width: 36px;
+  height: 34px;
   padding: 0;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -480,6 +545,10 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   outline: none;
   margin-bottom: 12px;
   font-family: inherit;
+  min-height: 38px;
+  max-height: 210px;
+  overflow-y: auto;
+  line-height: 1.5;
 }
 
 #notes-input:focus { border-color: var(--accent); }

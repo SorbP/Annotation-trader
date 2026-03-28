@@ -68,8 +68,53 @@
 
   Annotate.onSaved(annotation => {
     ChartManager.addMarker(annotation)
+    ChartManager.setView(state.timeframe)
     prependAnnotationItem(annotation)
     annotationCount.textContent = parseInt(annotationCount.textContent) + 1
+  })
+
+  // ── Chart type panel ───────────────────────────────
+  const chartTypeBtn   = document.getElementById("chart-type-btn")
+  const chartTypePanel = document.getElementById("chart-type-panel")
+  const ctUpColor      = document.getElementById("ct-up-color")
+  const ctDownColor    = document.getElementById("ct-down-color")
+
+  chartTypeBtn.addEventListener("click", e => {
+    e.stopPropagation()
+    const rect = chartTypeBtn.getBoundingClientRect()
+    chartTypePanel.style.left = rect.left + "px"
+    chartTypePanel.style.top  = (rect.bottom + 4) + "px"
+    chartTypePanel.classList.toggle("hidden")
+  })
+
+  const CT_LABELS = {
+    "candles": "Candles", "hollow": "Hollow Candles", "bars": "Bars",
+    "hlc-bars": "HLC Bars", "heikin-ashi": "Heikin Ashi",
+    "line": "Line", "line-markers": "Line + Markers", "step-line": "Step Line",
+    "area": "Area", "baseline": "Baseline", "columns": "Columns"
+  }
+
+  chartTypePanel.querySelectorAll(".ct-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const type = item.dataset.type
+      ChartManager.setChartType(type)
+      chartTypePanel.querySelectorAll(".ct-item").forEach(i => i.classList.remove("active"))
+      item.classList.add("active")
+      chartTypeBtn.textContent = (CT_LABELS[type] || type) + " \u25BE"
+      chartTypePanel.classList.add("hidden")
+    })
+  })
+
+  ctUpColor.addEventListener("input", () => {
+    ChartManager.setColors(ctUpColor.value, ctDownColor.value)
+  })
+  ctDownColor.addEventListener("input", () => {
+    ChartManager.setColors(ctUpColor.value, ctDownColor.value)
+  })
+
+  document.addEventListener("mousedown", e => {
+    if (!chartTypePanel.contains(e.target) && e.target !== chartTypeBtn)
+      chartTypePanel.classList.add("hidden")
   })
 
   // ── Context menu ───────────────────────────────────
@@ -125,10 +170,32 @@
     })
 
     timeframeSelect.value = "1h"
+    exchangeSelect.value  = "binance"
 
-    // Default to Binance — best historical data access
-    exchangeSelect.value = "binance"
-    exchangeSelect.dispatchEvent(new Event("change"))
+    // Load Binance symbols, then pre-select BTC/USDT and auto-load
+    setStatus("Loading symbols...")
+    try {
+      const symbols = await API.symbols("binance")
+      symbolSelect.innerHTML = "<option value=''>Symbol...</option>"
+      symbols.forEach(s => {
+        const opt = document.createElement("option")
+        opt.value = s; opt.textContent = s
+        symbolSelect.appendChild(opt)
+      })
+      symbolSelect.disabled    = false
+      timeframeSelect.disabled = false
+      sinceInput.disabled      = false
+      symbolSelect.value       = "BTC/USDT"
+      updateLoadBtn()
+      setStatus("")
+
+      // Auto-load the chart, then enable default indicators
+      await loadChart()
+      await Promise.all([Indicators.toggle("rsi"), Indicators.toggle("stoch")])
+      ChartManager.setView("1h")
+    } catch (err) {
+      setStatus("Error: " + err.message)
+    }
   }
 
   exchangeSelect.addEventListener("change", async () => {
@@ -164,7 +231,7 @@
   }
 
   // ── Load chart ─────────────────────────────────────
-  loadBtn.addEventListener("click", async () => {
+  async function loadChart() {
     const exchange  = exchangeSelect.value
     const symbol    = symbolSelect.value
     const timeframe = timeframeSelect.value
@@ -184,6 +251,7 @@
 
       ChartManager.setData(candles)
       ChartManager.setMarkers(annotations)
+      ChartManager.setView(timeframe)
       renderAnnotationList(annotations)
       setStatus(`${candles.length} candles · ${annotations.length} annotations · live`)
 
@@ -195,7 +263,9 @@
     } finally {
       loadBtn.disabled = false
     }
-  })
+  }
+
+  loadBtn.addEventListener("click", loadChart)
 
   // ── Annotation list ────────────────────────────────
   function renderAnnotationList(annotations) {
@@ -247,7 +317,7 @@
         inFlight = false
       }
     }
-    liveInterval = setInterval(tick, 1000)
+    liveInterval = setInterval(tick, 5000)
   }
 
   function stopLive() {
@@ -269,7 +339,7 @@
         inFlight = false
       }
     }
-    tickerInterval = setInterval(tick, 500)
+    tickerInterval = setInterval(tick, 2000)
   }
 
   function setStatus(msg) { statusEl.textContent = msg }

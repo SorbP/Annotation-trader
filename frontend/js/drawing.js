@@ -20,8 +20,14 @@ const Drawing = (() => {
     return p.toFixed(6)
   }
 
+  let _rafPending = false
   function _forceRedraw() {
-    try { _chart().applyOptions({}) } catch (_) {}
+    if (_rafPending) return
+    _rafPending = true
+    requestAnimationFrame(() => {
+      _rafPending = false
+      try { _chart().applyOptions({}) } catch (_) {}
+    })
   }
 
   // ── Tool ─────────────────────────────────────────────
