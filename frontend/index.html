@@ -42,7 +42,9 @@
         <button class="draw-btn active" data-tool="pointer" title="Select / Annotate">&#9654;</button>
         <button class="draw-btn" data-tool="hline"    title="Horizontal line">&#9135;</button>
         <button class="draw-btn" data-tool="trendline" title="Trend line">&#8599;</button>
+        <button class="draw-btn" data-tool="fib" title="Fibonacci retracement" style="width:34px;font-size:11px;">Fib</button>
         <button id="clear-drawings-btn" title="Clear all drawings">&#128465;</button>
+        <button id="snap-btn" class="draw-btn" title="Toggle snap to candle OHLC" style="width:34px;font-size:11px;">&#9875;</button>
       </div>
     </div>
 
@@ -51,6 +53,7 @@
       <div id="chart-main-wrap">
         <div id="chart-main"></div>
         <div id="crosshair-info"></div>
+        <div id="snap-dot"></div>
       </div>
       <div id="chart-rsi-wrap" class="sub-chart hidden">
         <div class="resize-handle"></div>
@@ -76,6 +79,14 @@
         </div>
         <div id="chart-stoch"></div>
       </div>
+    </div>
+
+    <!-- Drawing properties panel (content built dynamically by PropPanel) -->
+    <div id="drawing-props" class="hidden"></div>
+
+    <!-- Right-click context menu -->
+    <div id="chart-context-menu" class="hidden">
+      <div class="ctx-item" id="ctx-hline">&#9135; Draw horizontal line</div>
     </div>
 
     <!-- Annotation panel -->

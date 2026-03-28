@@ -99,6 +99,24 @@ const ChartManager = (() => {
     stochZero = stochChart.addLineSeries({ color: "#ffffff22", lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Solid, priceLineVisible: false, lastValueVisible: false })
 
     syncTimeScales(mainChart, rsiChart, macdChart, stochChart)
+
+    // Full-height vertical crosshair line spanning all panes
+    const chartArea = document.getElementById("chart-area")
+    const vLine = document.createElement("div")
+    vLine.style.cssText = [
+      "position:absolute", "top:0", "bottom:0", "width:0",
+      "border-left:1px dashed #55556a",
+      "pointer-events:none", "z-index:10", "display:none",
+    ].join(";")
+    chartArea.appendChild(vLine)
+
+    mainChart.subscribeCrosshairMove(param => {
+      if (!param.point || param.point.x < 0) { vLine.style.display = "none"; return }
+      const areaLeft = chartArea.getBoundingClientRect().left
+      const mainLeft = document.getElementById("chart-main").getBoundingClientRect().left
+      vLine.style.left  = (mainLeft - areaLeft + param.point.x) + "px"
+      vLine.style.display = "block"
+    })
   }
 
   // ── Data ─────────────────────────────────────────────

@@ -221,6 +221,19 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   width: 100%;
 }
 
+#snap-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background: rgba(255,255,255,0.15);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 15;
+  display: none;
+}
+
 #crosshair-info {
   position: absolute;
   top: 8px;
@@ -230,6 +243,170 @@ button:disabled { opacity: 0.35; cursor: not-allowed; }
   pointer-events: none;
   z-index: 2;
 }
+
+/* ── Drawing properties panel ────────────────────── */
+#drawing-props {
+  position: fixed;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+  min-width: 240px;
+}
+
+#drawing-props.hidden { display: none; }
+
+.props-section-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.props-colors {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+  transition: border-color 0.1s;
+}
+
+.color-dot.active  { border-color: #ffffff; }
+.color-dot:hover   { border-color: #ffffff88; }
+
+#props-color-input {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  background: none;
+}
+
+.props-row {
+  display: flex;
+  gap: 4px;
+}
+
+.props-btn {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+
+.props-btn:hover  { border-color: var(--accent); color: var(--text); }
+.props-btn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+#props-delete-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+}
+
+#props-delete-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* ── Fibonacci level rows (inside drawing-props) ──── */
+.fib-level-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 0;
+  border-bottom: 1px solid #1a1a1f;
+}
+.fib-level-row:last-child { border-bottom: none; }
+
+.fib-level-row.fib-disabled { opacity: 0.38; }
+
+.fib-chk {
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.fib-swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: 1px solid #ffffff33;
+  transition: border-color 0.1s;
+}
+.fib-swatch:hover { border-color: #ffffff99; }
+
+.fib-lv-label {
+  font-size: 11px;
+  color: var(--text);
+  flex: 1;
+  min-width: 52px;
+}
+
+.fib-sty-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 12px;
+  cursor: pointer;
+  height: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.fib-sty-btn:hover  { border-color: var(--accent); color: var(--text); }
+.fib-sty-btn.active { border-color: var(--accent); color: var(--accent); }
+
+/* ── Context menu ────────────────────────────────── */
+#chart-context-menu {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 0;
+  z-index: 100;
+  min-width: 180px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+#chart-context-menu.hidden { display: none; }
+
+.ctx-item {
+  padding: 7px 14px;
+  font-size: 12px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ctx-item:hover { background: var(--border); }
 
 /* ── Annotation panel ────────────────────────────── */
 #annotation-panel {

@@ -18,6 +18,7 @@
   // ── Init ───────────────────────────────────────────
   ChartManager.init()
   PaneManager.init()
+  Drawing.init()
 
   // ── Indicator buttons ──────────────────────────────
   document.querySelectorAll(".ind-btn").forEach(btn => {
@@ -33,6 +34,10 @@
 
   document.getElementById("clear-drawings-btn").addEventListener("click", () => {
     Drawing.clearAll()
+  })
+
+  document.getElementById("snap-btn").addEventListener("click", () => {
+    Drawing.toggleSnap()
   })
 
   // ── Chart events ───────────────────────────────────
@@ -65,6 +70,42 @@
     ChartManager.addMarker(annotation)
     prependAnnotationItem(annotation)
     annotationCount.textContent = parseInt(annotationCount.textContent) + 1
+  })
+
+  // ── Context menu ───────────────────────────────────
+  const ctxMenu      = document.getElementById("chart-context-menu")
+  const ctxHLine     = document.getElementById("ctx-hline")
+  let   ctxMenuPrice = null
+
+  document.addEventListener("contextmenu", e => {
+    const container = document.getElementById("chart-main")
+    if (!container.contains(e.target)) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    // Right-click on an existing drawing → show its property panel
+    const hit = Drawing.findNear(e.clientX, e.clientY)
+    if (hit) {
+      ctxMenu.classList.add("hidden")
+      Drawing.showProps(hit, e.clientX, e.clientY)
+      return
+    }
+
+    // Right-click on empty chart → show add-line menu
+    const localY = e.clientY - container.getBoundingClientRect().top
+    ctxMenuPrice = ChartManager.getCandleSeries().coordinateToPrice(localY)
+    ctxMenu.style.left = e.clientX + "px"
+    ctxMenu.style.top  = e.clientY + "px"
+    ctxMenu.classList.remove("hidden")
+  }, true)
+
+  ctxHLine.addEventListener("click", () => {
+    if (ctxMenuPrice !== null) Drawing.placeHLine(ctxMenuPrice)
+    ctxMenu.classList.add("hidden")
+  })
+
+  document.addEventListener("mousedown", e => {
+    if (!ctxMenu.contains(e.target)) ctxMenu.classList.add("hidden")
   })
 
   // ── Bootstrap ──────────────────────────────────────
